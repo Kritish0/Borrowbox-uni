@@ -1,111 +1,116 @@
-<!-- deploy refresh -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fliporia</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Lacquer&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BorrowBox Uni</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="default">
-  <div id="app">
-    <div v-if="!isLoggedIn" class="login-page">
-      <h1>Welcome to Fliporia</h1>
-      <div class="login-form">
-        <label for="username">Enter Username:</label>
-        <input
-          v-model="username"
-          id="username"
-          type="text"
-          placeholder="Your username"
-          @keyup.enter="login"
-        >
-        <button @click="login" :disabled="!username.trim()">Login</button>
-      </div>
-    </div>
+<body>
 
-    <div v-if="isLoggedIn">
-      <h1 class="lacquer-heading">Fliporia - Welcome, {{ username }}!</h1>
-      <button @click="openSettings" class="settings-btn">🛠️</button>
+  <div id="loginPage" class="login-container">
+    <div class="login-card">
+      <div class="logo-badge">📦</div>
+      <h1>BorrowBox Uni</h1>
+      <p>Rental service for university essentials</p>
 
-      <div class="selector-container">
-        <div class="difficulty-selector">
-          <label for="difficulty">Difficulty:</label>
-          <select v-model="difficulty" @change="setDifficulty">
-            <option value="easy">Easy (2x2)</option>
-            <option value="medium">Medium (3x4)</option>
-            <option value="hard">Hard (4x5)</option>
-          </select>
-        </div>
-      </div>
+      <input type="email" id="email" placeholder="University Email">
+      <input type="password" id="password" placeholder="Password">
 
-      <p id="moves-counter">Moves Left: {{ movesLeft }}</p>
-      <p id="timer">Time Left: {{ timeLeft }} s</p>
-      <p id="score">Score: {{ score }}</p>
-      <p id="high-score">High Score: {{ highScore }}</p>
-
-      <button @click="restartGame" id="restart">Restart Game</button>
-
-      <div class="game-board">
-        <div
-          v-for="(card, index) in cards"
-          :key="index"
-          class="card"
-          :class="{ flipped: card.flipped, matched: card.matched }"
-          @click="flipCard(card)"
-        >
-          <div class="card-inner">
-            <div class="card-front"></div>
-            <div class="card-back">{{ card.value }}</div>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="showModal" class="modal">
-        <div class="modal-content">
-          <h2>{{ modalMessage }}</h2>
-          <p>Score: {{ score }}</p>
-          <button @click="closeModal">Play Again</button>
-        </div>
-      </div>
-
-      <div v-if="showSettingsModal" class="modal">
-        <div class="modal-content">
-          <h2>Settings</h2>
-          <div class="theme-selector">
-            <label for="theme">Theme:</label>
-            <select v-model="theme" @change="setTheme">
-              <option value="default">Default</option>
-              <option value="spring">Spring</option>
-              <option value="summer">Summer</option>
-              <option value="autumn">Autumn</option>
-              <option value="winter">Winter</option>
-            </select>
-          </div>
-          <button @click="openTutorial">Tutorial</button>
-          <button @click="logout" class="logout-btn">Logout</button>
-          <button @click="closeSettings">Close</button>
-        </div>
-      </div>
-
-      <div v-if="showTutorialModal" class="modal">
-        <div class="modal-content">
-          <h2>How to Play</h2>
-          <ul class="tutorial-list">
-            <li>Flip two cards at a time to find matching pairs.</li>
-            <li>Match all cards before running out of moves or time to win.</li>
-            <li>Use the difficulty selector to choose Easy, Medium, or Hard.</li>
-            <li>Score points for matches and bonus points for time left.</li>
-          </ul>
-          <button @click="closeTutorial">Close</button>
-        </div>
-      </div>
+      <button onclick="login()">Login</button>
+      <small>Use any email and password for demo</small>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <div id="app" class="hidden">
+    <header class="main-header">
+      <div>
+        <h2>BorrowBox Uni</h2>
+        <p>Rent, buy, and sell essentials for student life</p>
+      </div>
+
+      <button class="cart-btn" onclick="toggleCart()">
+        🛒 My Cart (<span id="cartCount">0</span>)
+      </button>
+    </header>
+
+    <main class="main-content">
+      <section class="hero-section">
+        <div class="hero-text">
+          <h1>Everything students need, without buying everything new.</h1>
+          <p>
+            Find stationery, furniture, room essentials, sports gear, and notes
+            in one place with flexible rental options.
+          </p>
+        </div>
+      </section>
+
+      <section class="search-section">
+        <input
+          type="text"
+          id="searchBar"
+          placeholder="Search for stationery, furniture, notes, sports gear..."
+          onkeyup="searchItems()"
+        >
+      </section>
+
+      <section class="quick-actions">
+        <button class="action-card rent" onclick="showActionPanel('rent')">📦 Rent Items</button>
+        <button class="action-card buy" onclick="showActionPanel('buy')">🛍️ Buy Items</button>
+        <button class="action-card sell" onclick="showActionPanel('sell')">💰 Sell Item</button>
+        <button class="action-card listings" onclick="showListings()">📋 My Listings</button>
+      </section>
+
+      <section class="categories-section">
+        <h3>Browse Categories</h3>
+        <div class="category-grid">
+          <button class="category-chip" onclick="openCategoryInPanel('Stationery', 'rent')">✏️ Stationery</button>
+          <button class="category-chip" onclick="openCategoryInPanel('Furniture', 'rent')">🪑 Furniture</button>
+          <button class="category-chip" onclick="openCategoryInPanel('Room', 'rent')">🛏️ Room Essentials</button>
+          <button class="category-chip" onclick="openCategoryInPanel('Sports', 'rent')">⚽ Sports</button>
+          <button class="category-chip" onclick="openCategoryInPanel('Notes', 'rent')">📚 Notes</button>
+        </div>
+      </section>
+
+      <div id="actionPanel" class="action-panel hidden"></div>
+
+      <section class="horizontal-section">
+        <div class="section-head">
+          <h3>Popular Items</h3>
+          <span>Student favourites</span>
+        </div>
+        <div class="horizontal-scroll" id="popularItems"></div>
+      </section>
+
+      <section class="horizontal-section">
+        <div class="section-head">
+          <h3>Recently Added</h3>
+          <span>Fresh listings for students</span>
+        </div>
+        <div class="horizontal-scroll" id="recentItems"></div>
+      </section>
+    </main>
+
+    <aside id="cart" class="cart">
+      <div class="cart-header">
+        <h3>My Cart</h3>
+        <button class="close-cart" onclick="toggleCart()">✖</button>
+      </div>
+
+      <ul id="cartList"></ul>
+
+      <div class="cart-footer">
+        <p>Total Items: <span id="cartCountBottom">0</span></p>
+        <button class="checkout-btn" onclick="checkout()">Checkout</button>
+      </div>
+    </aside>
+
+    <div id="overlay" class="overlay hidden" onclick="toggleCart()"></div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
