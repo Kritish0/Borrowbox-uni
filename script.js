@@ -12,7 +12,8 @@ import {
   setDoc,
   addDoc,
   collection,
-  getDocs
+  getDocs,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 // Firebase config
@@ -411,7 +412,9 @@ function showActionPanel(type) {
       categoryButtons.appendChild(button);
     }
 
-    const filteredListings = listedItems.filter(item => item.type?.toLowerCase() === (type === "buy" ? "sell" : "rent"));
+    const filteredListings = listedItems.filter(
+      item => item.type?.toLowerCase() === (type === "buy" ? "sell" : "rent")
+    );
 
     if (filteredListings.length > 0) {
       communityListings.innerHTML = `<h4>Student Listings</h4>`;
@@ -493,7 +496,9 @@ function openCategoryInPanel(category, type) {
     `;
   });
 
-  const filteredUserListings = listedItems.filter(item => item.type?.toLowerCase() === (type === "buy" ? "sell" : "rent"));
+  const filteredUserListings = listedItems.filter(
+    item => item.type?.toLowerCase() === (type === "buy" ? "sell" : "rent")
+  );
 
   if (filteredUserListings.length > 0) {
     userBox.innerHTML = `<h4>Student Listings</h4>`;
@@ -561,6 +566,26 @@ async function addSellItemPanel() {
   }
 }
 
+async function deleteListing(listingId) {
+  if (!currentUser) {
+    alert("You must be logged in.");
+    return;
+  }
+
+  const confirmDelete = confirm("Are you sure you want to delete this listing?");
+  if (!confirmDelete) return;
+
+  try {
+    await deleteDoc(doc(db, "listings", listingId));
+    listedItems = listedItems.filter(item => item.id !== listingId);
+
+    alert("Listing deleted successfully.");
+    showListings();
+  } catch (error) {
+    alert("Error deleting listing: " + error.message);
+  }
+}
+
 function showListings() {
   const panel = document.getElementById("actionPanel");
   if (!panel) return;
@@ -593,6 +618,7 @@ function showListings() {
           <span>${item.ownerEmail || "My Listing"}</span>
         </div>
         <button onclick="addToCart('${item.name.replace(/'/g, "\\'")}')">Add to Cart 🛒</button>
+        <button onclick="deleteListing('${item.id}')" class="delete-btn">Delete Listing 🗑️</button>
       </div>
     `;
   });
@@ -610,5 +636,6 @@ window.showActionPanel = showActionPanel;
 window.openCategoryInPanel = openCategoryInPanel;
 window.addSellItemPanel = addSellItemPanel;
 window.showListings = showListings;
+window.deleteListing = deleteListing;
 
 updateCartUI();
