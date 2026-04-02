@@ -1,6 +1,4 @@
-// Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -8,14 +6,13 @@ import {
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
-
 import {
   getFirestore,
   doc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-// Your config
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyA5eRu4osCsXxV74iCXgZ5sJN8kK1B3iGc",
   authDomain: "borrowbox-uni.firebaseapp.com",
@@ -30,6 +27,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Demo marketplace data
 const data = {
   Stationery: [
     {
@@ -136,24 +135,92 @@ const recentItems = [
 let cart = [];
 let listedItems = [];
 
-function login() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
+// Small helper for auth messages
+function showMessage(message, isError = false) {
+  const authMessage = document.getElementById("authMessage");
+  if (!authMessage) return;
+  authMessage.textContent = message;
+  authMessage.style.color = isError ? "#dc2626" : "#16a34a";
+}
 
-  if (!email || !password) {
-    alert("Please enter both email and password.");
+// Auth: Sign Up
+async function signUp() {
+  const fullName = document.getElementById("fullName")?.value.trim();
+  const email = document.getElementById("email")?.value.trim();
+  const password = document.getElementById("password")?.value.trim();
+
+  if (!fullName || !email || !password) {
+    showMessage("Please fill in name, email, and password.", true);
     return;
   }
 
-  document.getElementById("loginPage").style.display = "none";
-  document.getElementById("app").classList.remove("hidden");
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
-  populateHorizontal("popularItems", popularItems, "buy");
-  populateHorizontal("recentItems", recentItems, "rent");
+    await setDoc(doc(db, "users", user.uid), {
+      fullName,
+      email,
+      createdAt: new Date().toISOString()
+    });
+
+    showMessage("Account created successfully.");
+  } catch (error) {
+    showMessage(error.message, true);
+  }
 }
+
+// Auth: Login
+async function login() {
+  const email = document.getElementById("email")?.value.trim();
+  const password = document.getElementById("password")?.value.trim();
+
+  if (!email || !password) {
+    showMessage("Please enter both email and password.", true);
+    return;
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    showMessage("Login successful.");
+  } catch (error) {
+    showMessage(error.message, true);
+  }
+}
+
+// Auth: Logout
+async function logout() {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error("Logout error:", error.message);
+  }
+}
+
+// Show/hide app based on real auth state
+onAuthStateChanged(auth, (user) => {
+  const loginPage = document.getElementById("loginPage");
+  const appPage = document.getElementById("app");
+
+  if (!loginPage || !appPage) return;
+
+  if (user) {
+    loginPage.style.display = "none";
+    appPage.classList.remove("hidden");
+
+    populateHorizontal("popularItems", popularItems, "buy");
+    populateHorizontal("recentItems", recentItems, "rent");
+    updateCartUI();
+  } else {
+    loginPage.style.display = "flex";
+    appPage.classList.add("hidden");
+  }
+});
 
 function populateHorizontal(containerId, itemsArray, defaultAction = "rent") {
   const container = document.getElementById(containerId);
+  if (!container) return;
+
   container.innerHTML = "";
 
   itemsArray.forEach(item => {
@@ -176,8 +243,10 @@ function populateHorizontal(containerId, itemsArray, defaultAction = "rent") {
 }
 
 function searchItems() {
-  const query = document.getElementById("searchBar").value.toLowerCase().trim();
+  const query = document.getElementById("searchBar")?.value.toLowerCase().trim();
   const panel = document.getElementById("actionPanel");
+  if (!panel) return;
+
   panel.innerHTML = "";
 
   if (!query) {
@@ -202,6 +271,7 @@ function searchItems() {
   `;
 
   const box = document.getElementById("searchResults");
+  if (!box) return;
 
   if (foundItems.length === 0) {
     box.innerHTML = `<p class="empty-message">No items found for "${query}".</p>`;
@@ -237,10 +307,14 @@ function addToCart(item) {
 }
 
 function updateCartUI() {
-  document.getElementById("cartCount").innerText = cart.length;
-  document.getElementById("cartCountBottom").innerText = cart.length;
-
+  const cartCount = document.getElementById("cartCount");
+  const cartCountBottom = document.getElementById("cartCountBottom");
   const cartList = document.getElementById("cartList");
+
+  if (cartCount) cartCount.innerText = cart.length;
+  if (cartCountBottom) cartCountBottom.innerText = cart.length;
+  if (!cartList) return;
+
   cartList.innerHTML = "";
 
   if (cart.length === 0) {
@@ -256,8 +330,8 @@ function updateCartUI() {
 }
 
 function toggleCart() {
-  document.getElementById("cart").classList.toggle("show");
-  document.getElementById("overlay").classList.toggle("hidden");
+  document.getElementById("cart")?.classList.toggle("show");
+  document.getElementById("overlay")?.classList.toggle("hidden");
 }
 
 function checkout() {
@@ -269,12 +343,14 @@ function checkout() {
   alert("Checkout successful!");
   cart = [];
   updateCartUI();
-  document.getElementById("cart").classList.remove("show");
-  document.getElementById("overlay").classList.add("hidden");
+  document.getElementById("cart")?.classList.remove("show");
+  document.getElementById("overlay")?.classList.add("hidden");
 }
 
 function showActionPanel(type) {
   const panel = document.getElementById("actionPanel");
+  if (!panel) return;
+
   panel.classList.remove("hidden");
 
   if (type === "rent" || type === "buy") {
@@ -285,6 +361,7 @@ function showActionPanel(type) {
     `;
 
     const categoryButtons = document.getElementById("categoryButtons");
+    if (!categoryButtons) return;
 
     for (let category in data) {
       const button = document.createElement("button");
@@ -312,6 +389,7 @@ function showActionPanel(type) {
 
 function openCategoryInPanel(category, type) {
   const panel = document.getElementById("actionPanel");
+  if (!panel) return;
 
   panel.innerHTML = `
     <h3>${type === "rent" ? "Rent" : "Buy"} - ${category}</h3>
@@ -320,6 +398,7 @@ function openCategoryInPanel(category, type) {
   `;
 
   const box = document.getElementById("categoryItems");
+  if (!box) return;
 
   data[category].forEach(item => {
     box.innerHTML += `
@@ -351,10 +430,10 @@ function openCategoryInPanel(category, type) {
 }
 
 function addSellItemPanel() {
-  const name = document.getElementById("sellNamePanel").value.trim();
-  const price = document.getElementById("sellPricePanel").value.trim();
-  const img = document.getElementById("sellImagePanel").value.trim();
-  const type = document.getElementById("sellTypePanel").value;
+  const name = document.getElementById("sellNamePanel")?.value.trim();
+  const price = document.getElementById("sellPricePanel")?.value.trim();
+  const img = document.getElementById("sellImagePanel")?.value.trim();
+  const type = document.getElementById("sellTypePanel")?.value;
 
   if (!name || !price || !img) {
     alert("Please fill all fields.");
@@ -379,6 +458,8 @@ function addSellItemPanel() {
 
 function showListings() {
   const panel = document.getElementById("actionPanel");
+  if (!panel) return;
+
   panel.classList.remove("hidden");
 
   panel.innerHTML = `
@@ -387,6 +468,7 @@ function showListings() {
   `;
 
   const box = document.getElementById("myListings");
+  if (!box) return;
 
   if (listedItems.length === 0) {
     box.innerHTML = `<p class="empty-message">No items listed yet.</p>`;
@@ -408,5 +490,18 @@ function showListings() {
     `;
   });
 }
+
+// Expose functions to HTML buttons because this file is now a module
+window.signUp = signUp;
+window.login = login;
+window.logout = logout;
+window.searchItems = searchItems;
+window.addToCart = addToCart;
+window.toggleCart = toggleCart;
+window.checkout = checkout;
+window.showActionPanel = showActionPanel;
+window.openCategoryInPanel = openCategoryInPanel;
+window.addSellItemPanel = addSellItemPanel;
+window.showListings = showListings;
 
 updateCartUI();
