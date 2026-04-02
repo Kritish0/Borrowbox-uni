@@ -17,11 +17,14 @@
       <h1>BorrowBox Uni</h1>
       <p>Rental service for university essentials</p>
 
+      <input type="text" id="fullName" placeholder="Full Name (for sign up only)">
       <input type="email" id="email" placeholder="University Email">
       <input type="password" id="password" placeholder="Password">
 
+      <button onclick="signUp()">Sign Up</button>
       <button onclick="login()">Login</button>
-      <small>Use any email and password for demo</small>
+
+      <small id="authMessage">Create an account or log in to continue</small>
     </div>
   </div>
 
@@ -32,9 +35,12 @@
         <p>Rent, buy, and sell essentials for student life</p>
       </div>
 
-      <button class="cart-btn" onclick="toggleCart()">
-        🛒 My Cart (<span id="cartCount">0</span>)
-      </button>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="cart-btn" onclick="toggleCart()">
+          🛒 My Cart (<span id="cartCount">0</span>)
+        </button>
+        <button class="cart-btn" onclick="logout()">Logout</button>
+      </div>
     </header>
 
     <main class="main-content">
@@ -111,7 +117,6 @@
     <div id="overlay" class="overlay hidden" onclick="toggleCart()"></div>
   </div>
 
-  <script src="script.js"></script>
   <script type="module" src="script.js"></script>
 </body>
 </html>
