@@ -12,9 +12,7 @@ import {
   setDoc,
   addDoc,
   collection,
-  getDocs,
-  query,
-  where
+  getDocs
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 // Firebase config
@@ -204,16 +202,10 @@ async function logout() {
   }
 }
 
-async function loadUserListings() {
-  if (!currentUser) return;
-
+// Load ALL listings for everyone
+async function loadAllListings() {
   try {
-    const listingsQuery = query(
-      collection(db, "listings"),
-      where("ownerId", "==", currentUser.uid)
-    );
-
-    const querySnapshot = await getDocs(listingsQuery);
+    const querySnapshot = await getDocs(collection(db, "listings"));
 
     listedItems = [];
 
@@ -244,7 +236,7 @@ onAuthStateChanged(auth, async (user) => {
     populateHorizontal("popularItems", popularItems, "buy");
     populateHorizontal("recentItems", recentItems, "rent");
 
-    await loadUserListings();
+    await loadAllListings();
     updateCartUI();
   } else {
     currentUser = null;
@@ -302,6 +294,15 @@ function searchItems() {
     });
   }
 
+  listedItems.forEach(item => {
+    if (item.name.toLowerCase().includes(query)) {
+      foundItems.push({
+        ...item,
+        category: "User Listing"
+      });
+    }
+  });
+
   panel.classList.remove("hidden");
   panel.innerHTML = `
     <h3>Search Results</h3>
@@ -317,22 +318,20 @@ function searchItems() {
   }
 
   foundItems.forEach(item => {
+    const priceText =
+      item.buyPrice !== undefined && item.rentPrice !== undefined
+        ? `Buy: $${item.buyPrice} | Rent: $${item.rentPrice}`
+        : `$${item.price}`;
+
     box.innerHTML += `
       <div class="card">
         <img src="${item.img}" alt="${item.name}">
         <h4>${item.name}</h4>
-        <p class="price-tag">Buy: $${item.buyPrice} | Rent: $${item.rentPrice}</p>
+        <p class="price-tag">${priceText}</p>
         <div class="meta">
-          <span>${item.category}</span>
-          <span>Student item</span>
+          <span>${item.category || item.type || "Student item"}</span>
+          <span>${item.ownerEmail || "BorrowBox User"}</span>
         </div>
-        <select>
-          <option>🗓️ Daily Rent</option>
-          <option>📅 Weekly Rent</option>
-          <option>📆 Monthly Rent</option>
-          <option>🏫 Semester Rent</option>
-          <option>🗓️ Yearly Rent</option>
-        </select>
         <button onclick="addToCart('${item.name.replace(/'/g, "\\'")}')">Add to Cart 🛒</button>
       </div>
     `;
@@ -396,10 +395,13 @@ function showActionPanel(type) {
       <h3>${type === "rent" ? "Rent Items" : "Buy Items"}</h3>
       <p>Select a category to continue.</p>
       <div id="categoryButtons"></div>
+      <div class="panel-items" id="communityListings" style="margin-top: 20px;"></div>
     `;
 
     const categoryButtons = document.getElementById("categoryButtons");
-    if (!categoryButtons) return;
+    const communityListings = document.getElementById("communityListings");
+
+    if (!categoryButtons || !communityListings) return;
 
     for (let category in data) {
       const button = document.createElement("button");
@@ -407,6 +409,29 @@ function showActionPanel(type) {
       button.innerText = category;
       button.onclick = () => openCategoryInPanel(category, type);
       categoryButtons.appendChild(button);
+    }
+
+    const filteredListings = listedItems.filter(item => item.type?.toLowerCase() === (type === "buy" ? "sell" : "rent"));
+
+    if (filteredListings.length > 0) {
+      communityListings.innerHTML = `<h4>Student Listings</h4>`;
+
+      filteredListings.forEach(item => {
+        communityListings.innerHTML += `
+          <div class="card">
+            <img src="${item.img}" alt="${item.name}">
+            <h4>${item.name}</h4>
+            <p class="price-tag">$${item.price} ${item.type.toLowerCase()}</p>
+            <div class="meta">
+              <span>${item.type}</span>
+              <span>${item.ownerEmail || "BorrowBox User"}</span>
+            </div>
+            <button onclick="addToCart('${item.name.replace(/'/g, "\\'")}')">Add to Cart 🛒</button>
+          </div>
+        `;
+      });
+    } else {
+      communityListings.innerHTML = `<p class="empty-message">No student listings available yet.</p>`;
     }
   } else if (type === "sell") {
     panel.innerHTML = `
@@ -433,10 +458,12 @@ function openCategoryInPanel(category, type) {
     <h3>${type === "rent" ? "Rent" : "Buy"} - ${category}</h3>
     <button class="back-btn" onclick="showActionPanel('${type}')">← Back</button>
     <div class="panel-items" id="categoryItems"></div>
+    <div class="panel-items" id="userCategoryItems" style="margin-top: 20px;"></div>
   `;
 
   const box = document.getElementById("categoryItems");
-  if (!box) return;
+  const userBox = document.getElementById("userCategoryItems");
+  if (!box || !userBox) return;
 
   data[category].forEach(item => {
     box.innerHTML += `
@@ -465,6 +492,27 @@ function openCategoryInPanel(category, type) {
       </div>
     `;
   });
+
+  const filteredUserListings = listedItems.filter(item => item.type?.toLowerCase() === (type === "buy" ? "sell" : "rent"));
+
+  if (filteredUserListings.length > 0) {
+    userBox.innerHTML = `<h4>Student Listings</h4>`;
+
+    filteredUserListings.forEach(item => {
+      userBox.innerHTML += `
+        <div class="card">
+          <img src="${item.img}" alt="${item.name}">
+          <h4>${item.name}</h4>
+          <p class="price-tag">$${item.price} ${item.type.toLowerCase()}</p>
+          <div class="meta">
+            <span>${item.type}</span>
+            <span>${item.ownerEmail || "BorrowBox User"}</span>
+          </div>
+          <button onclick="addToCart('${item.name.replace(/'/g, "\\'")}')">Add to Cart 🛒</button>
+        </div>
+      `;
+    });
+  }
 }
 
 async function addSellItemPanel() {
@@ -519,6 +567,8 @@ function showListings() {
 
   panel.classList.remove("hidden");
 
+  const myItems = listedItems.filter(item => item.ownerId === currentUser?.uid);
+
   panel.innerHTML = `
     <h3>My Listings</h3>
     <div class="panel-items" id="myListings"></div>
@@ -527,12 +577,12 @@ function showListings() {
   const box = document.getElementById("myListings");
   if (!box) return;
 
-  if (listedItems.length === 0) {
+  if (myItems.length === 0) {
     box.innerHTML = `<p class="empty-message">No items listed yet.</p>`;
     return;
   }
 
-  listedItems.forEach(item => {
+  myItems.forEach(item => {
     box.innerHTML += `
       <div class="card">
         <img src="${item.img}" alt="${item.name}">
@@ -540,7 +590,7 @@ function showListings() {
         <p class="price-tag">$${item.price}</p>
         <div class="meta">
           <span>${item.type}</span>
-          <span>My Listing</span>
+          <span>${item.ownerEmail || "My Listing"}</span>
         </div>
         <button onclick="addToCart('${item.name.replace(/'/g, "\\'")}')">Add to Cart 🛒</button>
       </div>
