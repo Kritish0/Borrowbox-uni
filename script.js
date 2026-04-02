@@ -1,3 +1,35 @@
+// Firebase imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+import {
+  getFirestore,
+  doc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+// Your config
+const firebaseConfig = {
+  apiKey: "AIzaSyA5eRu4osCsXxV74iCXgZ5sJN8kK1B3iGc",
+  authDomain: "borrowbox-uni.firebaseapp.com",
+  projectId: "borrowbox-uni",
+  storageBucket: "borrowbox-uni.firebasestorage.app",
+  messagingSenderId: "194399847190",
+  appId: "1:194399847190:web:67fd77794e75c297ebc637",
+  measurementId: "G-Q72LR4BMJT"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 const data = {
   Stationery: [
     {
