@@ -9,7 +9,12 @@ import {
 import {
   getFirestore,
   doc,
-  setDoc
+  setDoc,
+  addDoc,
+  collection,
+  getDocs,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 // Firebase config
@@ -27,6 +32,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+let currentUser = null;
 
 // Demo marketplace data
 const data = {
@@ -197,21 +204,52 @@ async function logout() {
   }
 }
 
+async function loadUserListings() {
+  if (!currentUser) return;
+
+  try {
+    const listingsQuery = query(
+      collection(db, "listings"),
+      where("ownerId", "==", currentUser.uid)
+    );
+
+    const querySnapshot = await getDocs(listingsQuery);
+
+    listedItems = [];
+
+    querySnapshot.forEach((docSnap) => {
+      listedItems.push({
+        id: docSnap.id,
+        ...docSnap.data()
+      });
+    });
+  } catch (error) {
+    console.error("Error loading listings:", error.message);
+  }
+}
+
 // Show/hide app based on real auth state
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   const loginPage = document.getElementById("loginPage");
   const appPage = document.getElementById("app");
 
   if (!loginPage || !appPage) return;
 
   if (user) {
+    currentUser = user;
+
     loginPage.style.display = "none";
     appPage.classList.remove("hidden");
 
     populateHorizontal("popularItems", popularItems, "buy");
     populateHorizontal("recentItems", recentItems, "rent");
+
+    await loadUserListings();
     updateCartUI();
   } else {
+    currentUser = null;
+    listedItems = [];
+
     loginPage.style.display = "flex";
     appPage.classList.add("hidden");
   }
@@ -429,7 +467,7 @@ function openCategoryInPanel(category, type) {
   });
 }
 
-function addSellItemPanel() {
+async function addSellItemPanel() {
   const name = document.getElementById("sellNamePanel")?.value.trim();
   const price = document.getElementById("sellPricePanel")?.value.trim();
   const img = document.getElementById("sellImagePanel")?.value.trim();
@@ -440,20 +478,39 @@ function addSellItemPanel() {
     return;
   }
 
-  listedItems.push({
+  if (!currentUser) {
+    alert("You must be logged in to post an item.");
+    return;
+  }
+
+  const newListing = {
     name,
-    price,
+    price: Number(price),
     img,
-    type
-  });
+    type,
+    ownerId: currentUser.uid,
+    ownerEmail: currentUser.email,
+    createdAt: new Date().toISOString()
+  };
 
-  alert(`${name} posted for ${type}.`);
+  try {
+    const docRef = await addDoc(collection(db, "listings"), newListing);
 
-  document.getElementById("sellNamePanel").value = "";
-  document.getElementById("sellPricePanel").value = "";
-  document.getElementById("sellImagePanel").value = "";
+    listedItems.push({
+      id: docRef.id,
+      ...newListing
+    });
 
-  showListings();
+    alert(`${name} posted for ${type}.`);
+
+    document.getElementById("sellNamePanel").value = "";
+    document.getElementById("sellPricePanel").value = "";
+    document.getElementById("sellImagePanel").value = "";
+
+    showListings();
+  } catch (error) {
+    alert("Error saving listing: " + error.message);
+  }
 }
 
 function showListings() {
